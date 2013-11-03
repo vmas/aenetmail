@@ -34,12 +34,12 @@ namespace AE.Net.Mail {
 					if (c == ' ') {
 						if (name == null) {
 							name = temp.ToString();
-							temp.Clear();
+							temp = new StringBuilder();
 
 						} else if (nump == 0) {
 							values[name] = temp.ToString();
 							name = null;
-							temp.Clear();
+							temp = new StringBuilder();
 						} else
 							temp.Append(c);
 					} else if (c == '(') {
@@ -385,14 +385,7 @@ namespace AE.Net.Mail {
 		#region IsValidBase64
 		//stolen from http://stackoverflow.com/questions/3355407/validate-string-is-base64-format-using-regex
 		private const char Base64Padding = '=';
-
-		private static readonly HashSet<char> Base64Characters = new HashSet<char>() { 
-						'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 
-						'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', 'a', 'b', 'c', 'd', 'e', 'f', 
-						'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 
-						'w', 'x', 'y', 'z', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '+', '/'
-				};
-
+		
 		internal static bool IsValidBase64String(ref string param, bool strictPadding = false) {
 			if (param == null) {
 				// null string is not Base64 
@@ -433,16 +426,14 @@ namespace AE.Net.Mail {
 				return false;
 			}
 
-			foreach (char c in paramWOPadding) {
-				if (!Base64Characters.Contains(c)) {
-					// string contains non-Base64 character
-					return false;
-				}
-			}
-
-			// nothing invalid found
-			return true;
+			return paramWOPadding.All(IsBase64);
 		}
+
+		private static bool IsBase64(char ch)
+		{
+			return (ch >= 'A' && ch <= 'Z') || (ch >= 'a' && ch <= 'z') || (ch >= '0' && ch <= '9') || ch == '+' || ch == '/';
+		}
+
 		#endregion
 
 		internal static VT Get<KT, VT>(this IDictionary<KT, VT> dictionary, KT key, VT defaultValue = default(VT)) {

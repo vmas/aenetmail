@@ -71,7 +71,7 @@ namespace AE.Net.Mail {
 
     public override string ToString() {
       if (Conditions != null && Conditions.Count > 0 && Operator != null) {
-        return (Operator.ToUpper() + " (" + string.Join(") (", Conditions) + ")").Trim();
+        return (Operator.ToUpper() + " (" + string.Join(") (", Conditions.ConvertAll(sc => sc.ToString()).ToArray()) + ")").Trim();
       }
 
       var builder = new System.Text.StringBuilder();

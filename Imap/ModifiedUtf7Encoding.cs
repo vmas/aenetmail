@@ -12,7 +12,7 @@ namespace AE.Net.Mail.Imap
         /// <param name="input"></param>
         /// <returns></returns>
         public static string Decode(string input) {
-            if (String.IsNullOrWhiteSpace(input)) {
+            if (string.IsNullOrEmpty(input) || input.All(char.IsWhiteSpace)) {
                 return input;
             }
 
@@ -36,7 +36,7 @@ namespace AE.Net.Mail.Imap
         /// <param name="input"></param>
         /// <returns></returns>
         public static string Encode(string input) {
-            if (String.IsNullOrWhiteSpace(input)) {
+            if (string.IsNullOrEmpty(input) || input.All(char.IsWhiteSpace)) {
                 return input;
             }
 
@@ -50,7 +50,7 @@ namespace AE.Net.Mail.Imap
                 if (IsPrintableAscii(c)) {
                     if (nonAsciiBuffer.Length > 0) {
                         result.Append(EncodeNonPrintableAsciiString(nonAsciiBuffer.ToString()));
-                        nonAsciiBuffer.Clear();
+                        nonAsciiBuffer = new StringBuilder();
                     }
 
                     if (c == '&') {

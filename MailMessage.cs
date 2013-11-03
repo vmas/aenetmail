@@ -34,8 +34,12 @@ namespace AE.Net.Mail {
             ret.IsBodyHtml = msg.ContentType.Contains("html");
             ret.From = msg.From;
             ret.Priority = (System.Net.Mail.MailPriority)msg.Importance;
+#if NET4
             foreach (var a in msg.ReplyTo)
                 ret.ReplyToList.Add(a);
+#else
+            ret.Headers.Add("Reply-To", string.Join(";", msg.ReplyTo.Select(m => m.Address).ToArray()));
+#endif
             foreach (var a in msg.To)
                 ret.To.Add(a);
             foreach (var a in msg.Attachments)
@@ -124,7 +128,7 @@ namespace AE.Net.Mail {
                 }
             }
 
-            if ((string.IsNullOrWhiteSpace(Body) || ContentType.StartsWith("multipart/")) && AlternateViews.Count > 0) {
+            if ((string.IsNullOrEmpty(Body) || Body.All(char.IsWhiteSpace) || ContentType.StartsWith("multipart/")) && AlternateViews.Count > 0) {
                 var att = AlternateViews.GetTextView() ?? AlternateViews.GetHtmlView();
                 if (att != null) {
                     Body = att.Body;
@@ -219,10 +223,10 @@ namespace AE.Net.Mail {
         private static readonly string[] SpecialHeaders = "Date,To,Cc,Reply-To,Bcc,Sender,From,Message-ID,Importance,Subject".Split(',');
         public virtual void Save(System.IO.TextWriter txt) {
             txt.WriteLine("Date: {0}", Date.GetRFC2060Date());
-            txt.WriteLine("To: {0}", string.Join("; ", To.Select(x => x.ToString())));
-            txt.WriteLine("Cc: {0}", string.Join("; ", Cc.Select(x => x.ToString())));
-            txt.WriteLine("Reply-To: {0}", string.Join("; ", ReplyTo.Select(x => x.ToString())));
-            txt.WriteLine("Bcc: {0}", string.Join("; ", Bcc.Select(x => x.ToString())));
+            txt.WriteLine("To: {0}", string.Join("; ", To.Select(x => x.ToString()).ToArray()));
+            txt.WriteLine("Cc: {0}", string.Join("; ", Cc.Select(x => x.ToString()).ToArray()));
+            txt.WriteLine("Reply-To: {0}", string.Join("; ", ReplyTo.Select(x => x.ToString()).ToArray()));
+            txt.WriteLine("Bcc: {0}", string.Join("; ", Bcc.Select(x => x.ToString()).ToArray()));
             if (Sender != null)
                 txt.WriteLine("Sender: {0}", Sender);
             if (From != null)
@@ -257,7 +261,7 @@ namespace AE.Net.Mail {
             this.Attachments.ToList().ForEach(att => {
                 txt.WriteLine();
                 txt.WriteLine("--" + boundary);
-                txt.WriteLine(string.Join("\n", att.Headers.Select(h => string.Format("{0}: {1}", h.Key, h.Value))));
+                txt.WriteLine(string.Join("\n", att.Headers.Select(h => string.Format("{0}: {1}", h.Key, h.Value)).ToArray()));
                 txt.WriteLine();
                 txt.WriteLine(att.Body);
             });

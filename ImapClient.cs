@@ -130,14 +130,14 @@ namespace AE.Net.Mail {
 		}
 
 		public virtual bool TryGetResponse(out string response, int millisecondsTimeout) {
-			using (var mre = new System.Threading.ManualResetEventSlim(false)) {
+			using (var mre = new System.Threading.ManualResetEvent(false)) {
 				string resp = response = null;
 				ThreadPool.QueueUserWorkItem(_ => {
 					resp = GetResponse();
 					mre.Set();
 				});
 
-				if (mre.Wait(millisecondsTimeout)) {
+				if (mre.WaitOne(millisecondsTimeout, true)) {
 					response = resp;
 					return true;
 				} else
@@ -181,7 +181,7 @@ namespace AE.Net.Mail {
 					_IdleEvents.Abort();
 				}
 				if (_IdleARE != null) {
-					_IdleARE.Dispose();
+					_IdleARE.Close();
 				}
 			}
 			_IdleEvents = null;
@@ -199,7 +199,7 @@ namespace AE.Net.Mail {
 
 			string size = body.Length.ToString();
 			if (email.RawFlags.Length > 0) {
-				flags = " (" + string.Join(" ", email.Flags) + ")";
+				flags = " (" + email.Flags.ToString().Replace(",", string.Empty) + ")";
 			}
 
 			if (mailbox == null)
@@ -721,14 +721,14 @@ namespace AE.Net.Mail {
 		}
 
 		public virtual void SetFlags(string flags, params MailMessage[] msgs) {
-			Store("UID " + string.Join(" ", msgs.Select(x => x.Uid)), true, flags);
+			Store("UID " + string.Join(" ", msgs.Select(x => x.Uid).ToArray()), true, flags);
 			foreach (var msg in msgs) {
 				msg.SetFlags(flags);
 			}
 		}
 
 		private string FlagsToFlagString(Flags flags) {
-			return string.Join(" ", flags.ToString().Split(',').Select(x => "\\" + x.Trim()));
+			return string.Join(" ", flags.ToString().Split(',').Select(x => "\\" + x.Trim()).ToArray());
 		}
 
 
@@ -737,7 +737,7 @@ namespace AE.Net.Mail {
 		}
 
 		public virtual void AddFlags(string flags, params MailMessage[] msgs) {
-			Store("UID " + string.Join(" ", msgs.Select(x => x.Uid)), false, flags);
+			Store("UID " + string.Join(" ", msgs.Select(x => x.Uid).ToArray()), false, flags);
 			foreach (var msg in msgs) {
 				msg.SetFlags(FlagsToFlagString(msg.Flags) + " " + flags);
 			}
