@@ -440,7 +440,10 @@ namespace AE.Net.Mail {
 				response = GetResponse();
 				var n = response.Trim().LastOrDefault();
 				if (n != ')') {
-					System.Diagnostics.Debugger.Break();
+					if(System.Diagnostics.Debugger.IsAttached)
+						System.Diagnostics.Debugger.Break();
+					else
+						throw new UnexpectedResponseException(response);
 					RaiseWarning(null, "Expected \")\" in stream, but received \"" + response + "\"");
 				}
 			}
@@ -557,9 +560,9 @@ namespace AE.Net.Mail {
 			if (!result.StartsWith(tag + "OK")) {
 				if (result.StartsWith("+ ") && result.EndsWith("==")) {
 					string jsonErr = Utilities.DecodeBase64(result.Substring(2), System.Text.Encoding.UTF7);
-					throw new Exception(jsonErr);
+					throw new UnexpectedResponseException(jsonErr);
 				} else
-					throw new Exception(result);
+					throw new UnexpectedResponseException(result);
 			}
 
 			//if (Supports("COMPRESS=DEFLATE")) {
@@ -661,17 +664,19 @@ namespace AE.Net.Mail {
 			string command = tag + isuid + "SEARCH " + criteria;
 			string response = SendCommandGetResponse(command);
 
-			if (!response.StartsWith("* SEARCH", StringComparison.InvariantCultureIgnoreCase) && !IsResultOK(response)) {
-				throw new Exception(response);
+			var uids = new List<string>();
+			while (response.StartsWith("* SEARCH", StringComparison.InvariantCultureIgnoreCase)) {
+				response = response.Length > 8 ? response.Substring(8) : string.Empty;
+				uids.AddRange(response.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries).ToArray());
+				response = GetResponse();
 			}
 
-			string temp;
-			while (!(temp = GetResponse()).StartsWith(tag)) {
-				response += Environment.NewLine + temp;
+			if (response.StartsWith(tag)) {
+				if (IsResultOK(response)) return uids.ToArray();
+				throw new NotSupportedException(response);
+			} else {
+				throw new UnexpectedResponseException(response);
 			}
-
-			var m = Regex.Match(response, @"^\* SEARCH (.*)");
-			return m.Groups[1].Value.Trim().Split(' ').Where(x => !string.IsNullOrEmpty(x)).ToArray();
 		}
 
 		public virtual Lazy<MailMessage>[] SearchMessages(SearchCondition criteria, bool headersonly = false, bool setseen = false) {
