@@ -399,7 +399,7 @@ namespace AE.Net.Mail {
 				if (imapHeaders["Flags"] != null)
 					mail.SetFlags(imapHeaders["Flags"]);
 
-				mail.Load(_Stream, headersonly, mail.Size);
+				mail.Load(this.Stream, headersonly, mail.Size);
 
 				foreach (var key in imapHeaders.AllKeys.Except(new[] { "UID", "Flags", "BODY[]", "BODY[HEADER]" }, StringComparer.OrdinalIgnoreCase))
 					mail.Headers.Add(key, new HeaderValue(imapHeaders[key]));
@@ -436,7 +436,7 @@ namespace AE.Net.Mail {
 
 				var imapHeaders = Utilities.ParseImapHeader(response.Substring(response.IndexOf('(') + 1));
 				var size = (imapHeaders["BODY[HEADER]"] ?? imapHeaders["BODY[]"]).Trim('{', '}').ToInt();
-				var msg = action(_Stream, size, imapHeaders);
+				var msg = action(this.Stream, size, imapHeaders);
 
 				response = GetResponse();
 				var n = response.Trim().LastOrDefault();

@@ -4,8 +4,8 @@ using System.Net.Sockets;
 
 namespace AE.Net.Mail {
 	public abstract class TextClient : IDisposable {
-		protected TcpClient _Connection;
-		protected Stream _Stream;
+		private TcpClient _Connection;
+		private Stream _Stream;
 		private int _timeout;
 
 		public virtual string Host { get; private set; }
@@ -15,6 +15,18 @@ namespace AE.Net.Mail {
 		public virtual bool IsAuthenticated { get; private set; }
 		public virtual bool IsDisposed { get; private set; }
 		public virtual System.Text.Encoding Encoding { get; set; }
+
+		protected TcpClient Connection
+		{
+			get { return _Connection; }
+			private set { _Connection = value; }
+		}
+
+		protected Stream Stream
+		{
+			get { return _Stream; }
+			private set { _Stream = value; }
+		}
 
 		public virtual int Timeout
 		{
@@ -87,7 +99,6 @@ namespace AE.Net.Mail {
 				{
 					if (!ar.AsyncWaitHandle.WaitOne(TimeSpan.FromMilliseconds(this.Timeout), true))
 					{
-						_Connection.Close();
 						throw new TimeoutException(string.Format("Could not connect to {0} on port {1}.", hostname, port));
 					}
 					_Connection.EndConnect(ar);
@@ -133,7 +144,7 @@ namespace AE.Net.Mail {
 		}
 
 		protected virtual void SendCommand(string command) {
-			var bytes = System.Text.Encoding.Default.GetBytes(command + "\r\n");
+			var bytes = this.Encoding.GetBytes(command + "\r\n");
 			_Stream.Write(bytes, 0, bytes.Length);
 		}
 

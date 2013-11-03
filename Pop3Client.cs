@@ -15,14 +15,14 @@ namespace AE.Net.Mail {
 		}
 
 		internal override void OnLogout() {
-			if (_Stream != null) {
+			if (this.Stream != null) {
 				SendCommand("QUIT");
 			}
 		}
 
 		internal override void CheckResultOK(string result) {
 			if (!result.StartsWith("+OK", StringComparison.OrdinalIgnoreCase)) {
-				throw new Exception(result.Substring(result.IndexOf(' ') + 1).Trim());
+				throw new UnexpectedResponseException(result.Substring(result.IndexOf(' ') + 1).Trim());
 			}
 		}
 
@@ -30,7 +30,11 @@ namespace AE.Net.Mail {
 			CheckAuthenticationStatus();
 			var result = SendCommandGetResponse("STAT");
 			CheckResultOK(result);
-			return int.Parse(result.Split(' ')[1]);
+			string[] data = result.Split(' ');
+			int count;
+			if (data.Length > 1 && int.TryParse(data[1], out count))
+				return count;
+			return 0;
 		}
 
 		public virtual MailMessage GetMessage(int index, bool headersOnly = false) {
@@ -44,7 +48,7 @@ namespace AE.Net.Mail {
 			var size = rxOctets.Match(line).Groups[1].Value.ToInt();
 			CheckResultOK(line);
 			var msg = new MailMessage();
-			msg.Load(_Stream, headersOnly, size, '.');
+			msg.Load(this.Stream, headersOnly, size, '.');
 
 			msg.Uid = uid;
 			var last = GetResponse();
@@ -52,7 +56,10 @@ namespace AE.Net.Mail {
 				last = GetResponse();
 
 			if (last != ".") {
-				System.Diagnostics.Debugger.Break();
+				if (System.Diagnostics.Debugger.IsAttached)
+					System.Diagnostics.Debugger.Break();
+				else
+					throw new UnexpectedResponseException(last);
 				RaiseWarning(msg, "Expected \".\" in stream, but received \"" + last + "\"");
 			}
 
