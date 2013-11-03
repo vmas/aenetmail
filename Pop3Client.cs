@@ -27,7 +27,7 @@ namespace AE.Net.Mail {
 		}
 
 		public virtual int GetMessageCount() {
-			CheckConnectionStatus();
+			CheckAuthenticationStatus();
 			var result = SendCommandGetResponse("STAT");
 			CheckResultOK(result);
 			return int.Parse(result.Split(' ')[1]);
@@ -39,7 +39,7 @@ namespace AE.Net.Mail {
 
 		private static Regex rxOctets = new Regex(@"(\d+)\s+octets", RegexOptions.IgnoreCase);
 		public virtual MailMessage GetMessage(string uid, bool headersOnly = false) {
-			CheckConnectionStatus();
+			CheckAuthenticationStatus();
 			var line = SendCommandGetResponse(string.Format(headersOnly ? "TOP {0} 0" : "RETR {0}", uid));
 			var size = rxOctets.Match(line).Groups[1].Value.ToInt();
 			CheckResultOK(line);

@@ -6,6 +6,7 @@ namespace AE.Net.Mail {
 	public abstract class TextClient : IDisposable {
 		protected TcpClient _Connection;
 		protected Stream _Stream;
+		private int _timeout;
 
 		public virtual string Host { get; private set; }
 		public virtual int Port { get; set; }
@@ -14,6 +15,20 @@ namespace AE.Net.Mail {
 		public virtual bool IsAuthenticated { get; private set; }
 		public virtual bool IsDisposed { get; private set; }
 		public virtual System.Text.Encoding Encoding { get; set; }
+
+		public virtual int Timeout
+		{
+			get { return _timeout; }
+			set
+			{
+				_timeout = value;
+				if (_Connection != null)
+				{
+					_Connection.ReceiveTimeout = value;
+					_Connection.SendTimeout = value;
+				}
+			}
+		}
 
 		public event EventHandler<WarningEventArgs> Warning;
 
@@ -25,7 +40,9 @@ namespace AE.Net.Mail {
 		}
 
 		public TextClient() {
-			Encoding = System.Text.Encoding.GetEncoding(1252);
+			_Connection = new TcpClient();
+			Encoding = System.Text.Encoding.UTF8;
+			this.Timeout = 10000;
 		}
 
 		internal abstract void OnLogin(string username, string password);
@@ -37,9 +54,7 @@ namespace AE.Net.Mail {
 		}
 
 		public virtual void Login(string username, string password) {
-			if (!IsConnected) {
-				throw new Exception("You must connect first!");
-			}
+			CheckConnectionStatus();
 			IsAuthenticated = false;
 			OnLogin(username, password);
 			IsAuthenticated = true;
@@ -64,7 +79,23 @@ namespace AE.Net.Mail {
 				Port = port;
 				Ssl = ssl;
 
-				_Connection = new TcpClient(hostname, port);
+				_Connection.SendTimeout = this.Timeout;
+				_Connection.ReceiveTimeout = this.Timeout;
+				IAsyncResult ar = _Connection.BeginConnect(hostname, port, null, null);
+				System.Threading.WaitHandle wh = ar.AsyncWaitHandle;
+				try
+				{
+					if (!ar.AsyncWaitHandle.WaitOne(TimeSpan.FromMilliseconds(this.Timeout), true))
+					{
+						_Connection.Close();
+						throw new TimeoutException(string.Format("Could not connect to {0} on port {1}.", hostname, port));
+					}
+					_Connection.EndConnect(ar);
+				}
+				finally
+				{
+					wh.Close();
+				}
 				_Stream = _Connection.GetStream();
 				if (ssl) {
 					System.Net.Security.SslStream sslStream;
@@ -92,6 +123,11 @@ namespace AE.Net.Mail {
 				throw new ObjectDisposedException(this.GetType().Name);
 			if (!IsConnected)
 				throw new Exception("You must connect first!");
+		}
+
+		protected virtual void CheckAuthenticationStatus()
+		{
+			CheckConnectionStatus();
 			if (!IsAuthenticated)
 				throw new Exception("You must authenticate first!");
 		}

@@ -86,7 +86,7 @@ namespace AE.Net.Mail {
 			if (_IdleEvents == null || !_Idling)
 				return;
 
-			CheckConnectionStatus();
+			CheckAuthenticationStatus();
 			SendCommand("DONE");
 			if (!_IdleEvents.Join(2000))
 				_IdleEvents.Abort();
@@ -237,6 +237,7 @@ namespace AE.Net.Mail {
 
 		public virtual string[] Capability() {
 			IdlePause();
+			CheckConnectionStatus();
 			string command = GetTag() + "CAPABILITY";
 			string response = SendCommandGetResponse(command);
 			if (response.StartsWith("* CAPABILITY "))
